@@ -1,5 +1,6 @@
 ﻿using Nest;
 using System;
+using System.Threading.Tasks;
 
 namespace ElasticSeries
 {
@@ -22,6 +23,24 @@ namespace ElasticSeries
         {
 
             _elasticClient.Index(new TSData()
+            {
+                MetricName = metricName,
+                Value = value,
+                Time = time
+
+            }, idx => idx);
+
+        }
+
+        public async Task RecordASync(string metricName, double value)
+        {
+            await RecordAsync(metricName, value, DateTime.Now);
+        }
+
+        public async Task RecordAsync(string metricName, double value, DateTime time)
+        {
+
+            await _elasticClient.IndexAsync(new TSData()
             {
                 MetricName = metricName,
                 Value = value,
