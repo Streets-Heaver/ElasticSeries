@@ -7,10 +7,8 @@ namespace ElasticSeries
     public class SeriesClient
     {
         private readonly ElasticClient _elasticClient;
-        private readonly ConnectionSettings _settings;
         public SeriesClient(ConnectionSettings settings)
         {
-            _settings = settings;
             _elasticClient = new ElasticClient(settings);
         }
 
