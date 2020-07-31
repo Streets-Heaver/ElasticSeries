@@ -7,52 +7,18 @@ using System.Threading.Tasks;
 
 namespace ElasticSeries
 {
-    public class SeriesClient
+    public partial class SeriesClient : IDisposable, IAsyncDisposable
     {
         private readonly ElasticClient _elasticClient;
-        public SeriesClient(ConnectionSettings settings)
+        public SeriesClient(ConnectionSettings settings) : this(settings, 100)
+        {
+
+        }
+
+        public SeriesClient(ConnectionSettings settings, int batchSize)
         {
             _elasticClient = new ElasticClient(settings);
-        }
-
-        public void Record(string metricName, double value)
-        {
-            Record(metricName, value, DateTime.Now, null);
-        }
-
-        public void Record(string metricName, double value, Dictionary<string, object> additionalProperties)
-        {
-            Record(metricName, value, DateTime.Now, additionalProperties);
-        }
-
-        public void Record(string metricName, double value, DateTime time)
-        {
-            Record(metricName, value, time, null);
-        }
-
-        public void Record(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
-        {
-            _elasticClient.Index((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
-        }
-
-        public async Task RecordASync(string metricName, double value)
-        {
-            await RecordAsync(metricName, value, DateTime.Now, null);
-        }
-
-        public async Task RecordAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
-        {
-            await RecordAsync(metricName, value, DateTime.Now, additionalProperties);
-        }
-
-        public async Task RecordAsync(string metricName, double value, DateTime time)
-        {
-            await RecordAsync(metricName, value, time, null);
-        }
-
-        public async Task RecordAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
-        {
-            await _elasticClient.IndexAsync((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+            _batchSize = batchSize;
         }
 
         private dynamic BuildDocument(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
