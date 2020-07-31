@@ -32,24 +32,7 @@ namespace ElasticSeries
 
         public void Record(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
-            dynamic metricData;
-            metricData = new ExpandoObject();
-
-            metricData.MetricName = metricName;
-            metricData.Value = value;
-            metricData.Time = time;
-
-            if (additionalProperties != null && additionalProperties.Any())
-            {
-                var expando = metricData as IDictionary<string, object>;
-                foreach (var additionalProperty in additionalProperties)
-                {
-                    expando.Add(additionalProperty.Key, additionalProperty.Value);
-                }
-            }
-
-            _elasticClient.Index((object)metricData, idx => idx);
-
+            _elasticClient.Index((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
         }
 
         public async Task RecordASync(string metricName, double value)
@@ -69,7 +52,11 @@ namespace ElasticSeries
 
         public async Task RecordAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
+            await _elasticClient.IndexAsync((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+        }
 
+        private dynamic BuildDocument(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        {
             dynamic metricData;
             metricData = new ExpandoObject();
 
@@ -86,8 +73,7 @@ namespace ElasticSeries
                 }
             }
 
-            await _elasticClient.IndexAsync((object)metricData, idx => idx);
-
+            return metricData;
         }
     }
 }
