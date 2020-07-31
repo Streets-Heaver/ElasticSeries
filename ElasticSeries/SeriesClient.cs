@@ -1,5 +1,8 @@
 ﻿using Nest;
 using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ElasticSeries
@@ -14,37 +17,76 @@ namespace ElasticSeries
 
         public void Record(string metricName, double value)
         {
-            Record(metricName, value, DateTime.Now);
+            Record(metricName, value, DateTime.Now, null);
+        }
+
+        public void Record(string metricName, double value, Dictionary<string, object> additionalProperties)
+        {
+            Record(metricName, value, DateTime.Now, additionalProperties);
         }
 
         public void Record(string metricName, double value, DateTime time)
         {
+            Record(metricName, value, time, null);
+        }
 
-            _elasticClient.Index(new TSData()
+        public void Record(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        {
+            dynamic metricData;
+            metricData = new ExpandoObject();
+
+            metricData.MetricName = metricName;
+            metricData.Value = value;
+            metricData.Time = time;
+
+            if (additionalProperties != null && additionalProperties.Any())
             {
-                MetricName = metricName,
-                Value = value,
-                Time = time
+                var expando = metricData as IDictionary<string, object>;
+                foreach (var additionalProperty in additionalProperties)
+                {
+                    expando.Add(additionalProperty.Key, additionalProperty.Value);
+                }
+            }
 
-            }, idx => idx);
+            _elasticClient.Index((object)metricData, idx => idx);
 
         }
 
         public async Task RecordASync(string metricName, double value)
         {
-            await RecordAsync(metricName, value, DateTime.Now);
+            await RecordAsync(metricName, value, DateTime.Now, null);
+        }
+
+        public async Task RecordAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
+        {
+            await RecordAsync(metricName, value, DateTime.Now, additionalProperties);
         }
 
         public async Task RecordAsync(string metricName, double value, DateTime time)
         {
+            await RecordAsync(metricName, value, time, null);
+        }
 
-            await _elasticClient.IndexAsync(new TSData()
+        public async Task RecordAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        {
+
+            dynamic metricData;
+            metricData = new ExpandoObject();
+
+            metricData.MetricName = metricName;
+            metricData.Value = value;
+            metricData.Time = time;
+
+            if (additionalProperties != null && additionalProperties.Any())
             {
-                MetricName = metricName,
-                Value = value,
-                Time = time
+                var expando = metricData as IDictionary<string, object>;
+                foreach (var additionalProperty in additionalProperties)
+                {
+                    expando.Add(additionalProperty.Key, additionalProperty.Value);
+                }
+            }
 
-            }, idx => idx);
+            await _elasticClient.IndexAsync((object)metricData, idx => idx);
 
         }
     }
