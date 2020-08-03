@@ -1,5 +1,12 @@
+using ElasticSeries.Classes;
+using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Nest;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Dynamic;
+using System.IO;
 
 namespace ElasticSeries.IntegrationTests
 {
@@ -7,19 +14,17 @@ namespace ElasticSeries.IntegrationTests
     public class RecordTests
     {
         [TestMethod]
-        public void AddsToElasticSearch_BeTrue()
+        public void RecordsAreSaved_NotBeNull()
         {
-            var settings = new Nest.ConnectionSettings(new System.Uri("http://172.16.69.85:9200"));
-            settings.DefaultIndex("testindex");
+
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
             var client = new SeriesClient(settings);
 
-            var additional = new Dictionary<string, object>();
-            additional.Add("TestProperty1", "Test");
-            additional.Add("TestProperty2", 1);
-            additional.Add("TestProperty3", true);
+            var id = client.Record("test", 400);
 
-            client.Record("test", 400, additional);
-
+            id.Should().NotBeNull();
 
         }
     }
