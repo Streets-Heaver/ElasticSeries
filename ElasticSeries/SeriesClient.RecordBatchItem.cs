@@ -66,12 +66,14 @@ namespace ElasticSeries
         public IEnumerable<string> FlushBatch()
         {
             var documents = _elasticClient.IndexMany(_batchData);
+            _batchData = new List<dynamic>();
             return documents.Items.Select(x => x.Id);
         }
 
         public async Task<IEnumerable<string>> FlushBatchAsync()
         {
             var documents = await _elasticClient.IndexManyAsync(_batchData);
+            _batchData = new List<dynamic>();
             return documents.Items.Select(x => x.Id);
 
         }
@@ -84,6 +86,11 @@ namespace ElasticSeries
         public async ValueTask DisposeAsync()
         {
             await FlushBatchAsync();
+        }
+
+        public int GetCurrentBatchCount()
+        {
+            return _batchData.Count;
         }
 
     }
