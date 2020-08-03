@@ -1,6 +1,7 @@
 ﻿using Nest;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,60 +12,70 @@ namespace ElasticSeries
         private List<dynamic> _batchData = new List<dynamic>();
         private int _batchSize;
 
-        public void RecordBatchItem(string metricName, double value)
+        public IEnumerable<string> RecordBatchItem(string metricName, double value)
         {
-            RecordBatchItem(metricName, value, DateTime.Now, null);
+            return RecordBatchItem(metricName, value, DateTime.Now, null);
         }
 
-        public void RecordBatchItem(string metricName, double value, Dictionary<string, object> additionalProperties)
+        public IEnumerable<string> RecordBatchItem(string metricName, double value, Dictionary<string, object> additionalProperties)
         {
-            RecordBatchItem(metricName, value, DateTime.Now, additionalProperties);
+            return RecordBatchItem(metricName, value, DateTime.Now, additionalProperties);
         }
 
-        public void RecordBatchItem(string metricName, double value, DateTime time)
+        public IEnumerable<string> RecordBatchItem(string metricName, double value, DateTime time)
         {
-            RecordBatchItem(metricName, value, time, null);
+            return RecordBatchItem(metricName, value, time, null);
         }
 
-        public void RecordBatchItem(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        public IEnumerable<string> RecordBatchItem(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
             _batchData.Add(BuildDocument(metricName, value, time, additionalProperties));
 
             if (_batchData.Count == _batchSize)
-                FlushBatch();
+                return FlushBatch();
+            else
+                return Enumerable.Empty<string>();
         }
 
-        public async Task RecordBatchItemAsync(string metricName, double value)
+        public async Task<IEnumerable<string>> RecordBatchItemAsync(string metricName, double value)
         {
-            await RecordBatchItemAsync(metricName, value, DateTime.Now, null);
+            return await RecordBatchItemAsync(metricName, value, DateTime.Now, null);
         }
 
-        public async Task RecordBatchItemAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
+        public async Task<IEnumerable<string>> RecordBatchItemAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
         {
-            await RecordBatchItemAsync(metricName, value, DateTime.Now, additionalProperties);
+            return await RecordBatchItemAsync(metricName, value, DateTime.Now, additionalProperties);
         }
 
-        public async Task RecordBatchItemAsync(string metricName, double value, DateTime time)
+        public async Task<IEnumerable<string>> RecordBatchItemAsync(string metricName, double value, DateTime time)
         {
-            await RecordBatchItemAsync(metricName, value, time, null);
+            return await RecordBatchItemAsync(metricName, value, time, null);
         }
 
-        public async Task RecordBatchItemAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        public async Task<IEnumerable<string>> RecordBatchItemAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
             _batchData.Add(BuildDocument(metricName, value, time, additionalProperties));
 
             if (_batchData.Count == _batchSize)
-                await FlushBatchAsync();
+                return await FlushBatchAsync();
+            else
+                return Enumerable.Empty<string>();
+
         }
 
-        public void FlushBatch()
+        public IEnumerable<string> FlushBatch()
         {
-            _elasticClient.IndexMany(_batchData);
+            var documents = _elasticClient.IndexMany(_batchData);
+            _batchData = new List<dynamic>();
+            return documents.Items.Select(x => x.Id);
         }
 
-        public async Task FlushBatchAsync()
+        public async Task<IEnumerable<string>> FlushBatchAsync()
         {
-            await _elasticClient.IndexManyAsync(_batchData);
+            var documents = await _elasticClient.IndexManyAsync(_batchData);
+            _batchData = new List<dynamic>();
+            return documents.Items.Select(x => x.Id);
+
         }
 
         public void Dispose()
@@ -75,6 +86,11 @@ namespace ElasticSeries
         public async ValueTask DisposeAsync()
         {
             await FlushBatchAsync();
+        }
+
+        public int GetCurrentBatchCount()
+        {
+            return _batchData.Count;
         }
 
     }

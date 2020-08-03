@@ -1,7 +1,10 @@
-﻿using Nest;
+﻿using ElasticSeries.Classes;
+using Nest;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -13,6 +16,17 @@ namespace ElasticSeries
         public SeriesClient(ConnectionSettings settings) : this(settings, 100)
         {
 
+        }
+
+        public SeriesClient(string configFile) : this(configFile, 100)
+        {
+
+        }
+
+        public SeriesClient(string configFile, int batchSize) :
+            this(new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(configFile)).ElasticSearchUrl)), batchSize)
+        {
+          
         }
 
         public SeriesClient(ConnectionSettings settings, int batchSize)

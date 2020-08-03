@@ -7,44 +7,46 @@ namespace ElasticSeries
 {
     public partial class SeriesClient
     {
-        public void Record(string metricName, double value)
+        public string Record(string metricName, double value)
         {
-            Record(metricName, value, DateTime.Now, null);
+            return Record(metricName, value, DateTime.Now, null);
         }
 
-        public void Record(string metricName, double value, Dictionary<string, object> additionalProperties)
+        public string Record(string metricName, double value, Dictionary<string, object> additionalProperties)
         {
-            Record(metricName, value, DateTime.Now, additionalProperties);
+            return Record(metricName, value, DateTime.Now, additionalProperties);
         }
 
-        public void Record(string metricName, double value, DateTime time)
+        public string Record(string metricName, double value, DateTime time)
         {
-            Record(metricName, value, time, null);
+            return Record(metricName, value, time, null);
         }
 
-        public void Record(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        public string Record(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
-            _elasticClient.Index((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+            var response = _elasticClient.Index((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+            return response.Id;
         }
 
-        public async Task RecordAsync(string metricName, double value)
+        public async Task<string> RecordAsync(string metricName, double value)
         {
-            await RecordAsync(metricName, value, DateTime.Now, null);
+            return await RecordAsync(metricName, value, DateTime.Now, null);
         }
 
-        public async Task RecordAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
+        public async Task<string> RecordAsync(string metricName, double value, Dictionary<string, object> additionalProperties)
         {
-            await RecordAsync(metricName, value, DateTime.Now, additionalProperties);
+            return await RecordAsync(metricName, value, DateTime.Now, additionalProperties);
         }
 
-        public async Task RecordAsync(string metricName, double value, DateTime time)
+        public async Task<string> RecordAsync(string metricName, double value, DateTime time)
         {
-            await RecordAsync(metricName, value, time, null);
+            return await RecordAsync(metricName, value, time, null);
         }
 
-        public async Task RecordAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+        public async Task<string> RecordAsync(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
         {
-            await _elasticClient.IndexAsync((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+            var response = await _elasticClient.IndexAsync((object)BuildDocument(metricName, value, time, additionalProperties), idx => idx);
+            return response.Id;
         }
     }
 }
