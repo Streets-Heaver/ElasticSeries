@@ -23,7 +23,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings);
+            using var client = new SeriesClient(settings);
 
             var id = client.Record("test", 400, forcePush: true);
 
@@ -38,7 +38,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings);
+            using var client = new SeriesClient(settings);
 
             var id = await client.RecordAsync("test", 400, forcePush: true);
 
@@ -54,7 +54,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings);
+            using var client = new SeriesClient(settings);
 
             client.Record("test", 400);
             client.Record("test", 300);
@@ -72,7 +72,7 @@ namespace ElasticSeries.IntegrationTests
 
         }
 
-       
+
         [TestMethod]
         public void BatchIsSavedWhenBatchIsFull_NotBeEmpty()
         {
@@ -80,7 +80,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 10);
+            using var client = new SeriesClient(settings, 10);
 
             client.Record("test", 400);
             client.Record("test", 300);
@@ -102,7 +102,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 20);
+            using var client = new SeriesClient(settings, 20);
 
             client.Record("test", 400);
             client.Record("test", 300);
@@ -125,7 +125,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 20);
+            using var client = new SeriesClient(settings, 20);
 
             client.Record("test", 400);
             client.Record("test", 300);
@@ -150,22 +150,15 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 20);
+            await using var client = new SeriesClient(settings, 20);
 
-            client.Record("test", 400);
-            client.Record("test", 300);
-            client.Record("test", 420);
-            client.Record("test", 410);
-            client.Record("test", 200);
-            client.Record("test", 324);
-            client.Record("test", 542);
-            client.Record("test", 401);
-            client.Record("test", 434);
-            client.Record("test", 290);
+            await client.RecordAsync("test", 400);
+            await client.RecordAsync("test", 300);
 
             await client.DisposeAsync();
 
             client.GetCurrentBatchCount().Should().Be(0);
+
 
         }
 
@@ -178,7 +171,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings);
+            await using var client = new SeriesClient(settings);
 
             await client.RecordAsync("test", 400);
             await client.RecordAsync("test", 300);
@@ -194,6 +187,7 @@ namespace ElasticSeries.IntegrationTests
             var ids = await client.FlushBatchAsync();
             ids.Count().Should().Be(10);
 
+
         }
 
         [TestMethod]
@@ -203,7 +197,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 10);
+            await using var client = new SeriesClient(settings, 10);
 
             await client.RecordAsync("test", 400);
             await client.RecordAsync("test", 300);
@@ -218,6 +212,7 @@ namespace ElasticSeries.IntegrationTests
             var save = await client.RecordAsync("test", 290);
 
             save.Should().NotBeEmpty();
+
         }
 
         [TestMethod]
@@ -226,7 +221,7 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            var client = new SeriesClient(settings, 20);
+            await using var client = new SeriesClient(settings, 20);
 
             await client.RecordAsync("test", 400);
             await client.RecordAsync("test", 300);
@@ -242,6 +237,43 @@ namespace ElasticSeries.IntegrationTests
             var save = await client.RecordAsync("test", 290);
 
             save.Should().BeEmpty();
+
+
+        }
+
+
+        [TestMethod]
+        public async Task CallingDisposeWhenBatchIsEmptyDoesntErrorAsync_NotThrow()
+        {
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            Func<Task> act = async () =>
+            {
+                await using (var client = new SeriesClient(settings))
+                {
+
+                }
+
+            };
+            await act.Should().NotThrowAsync<ArgumentException>();
+
+        }
+
+        [TestMethod]
+        public void CallingDisposeWhenBatchIsEmptyDoesntError_NotThrow()
+        {
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            Action act = () =>
+            {
+                using (var client = new SeriesClient(settings))
+                {
+
+                }
+            };
+            act.Should().NotThrow<ArgumentException>();
 
         }
     }
