@@ -133,9 +133,14 @@ namespace ElasticSeries
         /// <returns></returns>
         public IEnumerable<string> FlushBatch()
         {
-            var documents = _elasticClient.IndexMany(_batchData);
-            _batchData = new List<dynamic>();
-            return documents.Items.Select(x => x.Id);
+            if (_batchData.Any())
+            {
+                var documents = _elasticClient.IndexMany(_batchData);
+                _batchData = new List<dynamic>();
+                return documents.Items.Select(x => x.Id);
+            }
+            else
+                return Enumerable.Empty<string>();
         }
 
         /// <summary>
@@ -144,9 +149,14 @@ namespace ElasticSeries
         /// <returns></returns>
         public async Task<IEnumerable<string>> FlushBatchAsync()
         {
-            var documents = await _elasticClient.IndexManyAsync(_batchData);
-            _batchData = new List<dynamic>();
-            return documents.Items.Select(x => x.Id);
+            if (_batchData.Any())
+            {
+                var documents = await _elasticClient.IndexManyAsync(_batchData);
+                _batchData = new List<dynamic>();
+                return documents.Items.Select(x => x.Id);
+            }
+            else
+                return Enumerable.Empty<string>();
 
         }
 
