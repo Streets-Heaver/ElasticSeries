@@ -1,12 +1,14 @@
-﻿using Nest;
+﻿using ElasticSeries.Gauges;
+using Nest;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 
-namespace ElasticSeries.Classes.Gauges
+namespace ElasticSeries.Gauges
 {
     public class AggregateGauge : IGauge
     {
@@ -15,6 +17,7 @@ namespace ElasticSeries.Classes.Gauges
         private readonly int _batchSize;
         private readonly ElasticClient _elasticClient;
         private List<double> _batchData = new List<double>();
+        private Timer _commitTimer;
 
 
         public AggregateGauge(ElasticClient elasticClient, string metricName, int batchSize, Dictionary<string, object> additionalProperties)
@@ -29,7 +32,37 @@ namespace ElasticSeries.Classes.Gauges
             _elasticClient = elasticClient;
         }
 
+        /// <summary>
+        /// Starts a timer that will commit an aggregate of all currently batched data when elapsed.
+        /// </summary>
+        /// <param name="tickDuration"></param>
+        public void StartTimer(TimeSpan tickDuration)
+        {
+            if (_commitTimer != null && _commitTimer.Enabled)
+                throw new InvalidOperationException("A timer is already running");
 
+            _commitTimer = new Timer(tickDuration.TotalMilliseconds);
+            _commitTimer.Elapsed += AggregateTick;
+            _commitTimer.AutoReset = true;
+            _commitTimer.Enabled = true;
+
+        }
+
+        /// <summary>
+        /// Stops the currently active timer
+        /// </summary>
+        public void StopTimer()
+        {
+            if (_commitTimer != null)
+                _commitTimer.Stop();
+            else
+                throw new InvalidOperationException("No currently active timers");
+        }
+
+        private void AggregateTick(object source, ElapsedEventArgs e)
+        {
+            CommitAggregate();
+        }
 
         /// <summary>
         /// Records a data point that will be sent to Elasticsearch. 
@@ -98,7 +131,7 @@ namespace ElasticSeries.Classes.Gauges
                 return document.Id;
             }
             else
-                return string.Empty; 
+                return string.Empty;
 
         }
 
@@ -108,6 +141,9 @@ namespace ElasticSeries.Classes.Gauges
         /// <returns></returns>
         public void Dispose()
         {
+            if (_commitTimer != null)
+                _commitTimer.Dispose();
+
             CommitAggregate();
         }
 
@@ -117,6 +153,9 @@ namespace ElasticSeries.Classes.Gauges
         /// <returns></returns>
         public async ValueTask DisposeAsync()
         {
+            if (_commitTimer != null)
+                _commitTimer.Dispose();
+
             await CommitAggregateAsync();
         }
 

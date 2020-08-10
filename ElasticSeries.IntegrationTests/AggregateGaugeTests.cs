@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ElasticSeries.IntegrationTests
@@ -195,7 +196,7 @@ namespace ElasticSeries.IntegrationTests
 
             var save = await gauge.RecordAsync(290);
 
-            save.Should().NotBeNullOrEmpty(); 
+            save.Should().NotBeNullOrEmpty();
 
         }
 
@@ -222,8 +223,6 @@ namespace ElasticSeries.IntegrationTests
             var save = await gauge.RecordAsync(290);
 
             save.Should().BeNullOrEmpty();
-
-
         }
 
 
@@ -237,7 +236,7 @@ namespace ElasticSeries.IntegrationTests
             {
                 await using (var client = new SeriesClient(settings))
                 {
-                   client.CreateAggregateGauge("test", 20);
+                    client.CreateAggregateGauge("test", 20);
 
                 }
 
@@ -261,6 +260,63 @@ namespace ElasticSeries.IntegrationTests
             };
             act.Should().NotThrow<ArgumentException>();
 
+        }
+
+        [TestMethod]
+        public void DataCommitedWhenTimerTicks_Be0()
+        {
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            using var client = new SeriesClient(settings);
+
+            var gauge = client.CreateAggregateGauge("test");
+            gauge.StartTimer(TimeSpan.FromSeconds(2));
+
+            gauge.Record(400);
+
+            Thread.Sleep(TimeSpan.FromSeconds(3));
+
+            gauge.GetCurrentBatchCount().Should().Be(0);
+        }
+
+        [TestMethod]
+        public void CanOnlyStartOneTimerPerGauge_ThrowsInvalidOperationException()
+        {
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            using var client = new SeriesClient(settings);
+
+            var gauge = client.CreateAggregateGauge("test");
+            gauge.StartTimer(TimeSpan.FromSeconds(2));
+
+            Action act = () =>
+            {
+                gauge.StartTimer(TimeSpan.FromSeconds(2));
+
+            };
+
+            act.Should().Throw<InvalidOperationException>();
+        }
+
+        [TestMethod]
+        public void CanOnlyStopWhenTimerRunning_ThrowsInvalidOperationException()
+        {
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            using var client = new SeriesClient(settings);
+
+            var gauge = client.CreateAggregateGauge("test");
+
+            Action act = () =>
+            {
+                gauge.StopTimer();
+
+            };
+
+            act.Should().Throw<InvalidOperationException>();
         }
     }
 }

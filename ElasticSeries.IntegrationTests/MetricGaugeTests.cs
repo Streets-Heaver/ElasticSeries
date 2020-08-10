@@ -1,5 +1,4 @@
 using ElasticSeries.Classes;
-using ElasticSeries.Classes.Gauges;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

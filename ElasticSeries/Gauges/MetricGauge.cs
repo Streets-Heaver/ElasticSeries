@@ -1,4 +1,5 @@
-﻿using Nest;
+﻿using ElasticSeries.Gauges;
+using Nest;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ElasticSeries.Classes.Gauges
+namespace ElasticSeries.Gauges
 {
     public class MetricGauge : IGauge
     {

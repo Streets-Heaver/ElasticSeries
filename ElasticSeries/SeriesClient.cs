@@ -1,5 +1,5 @@
 ﻿using ElasticSeries.Classes;
-using ElasticSeries.Classes.Gauges;
+using ElasticSeries.Gauges;
 using Nest;
 using Newtonsoft.Json;
 using System;
