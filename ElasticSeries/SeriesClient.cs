@@ -63,6 +63,11 @@ namespace ElasticSeries
             return _activeGauges[metricName] as AggregateGauge;
         }
 
+        public IGauge GetGauge(string metricName)
+        {
+            return _activeGauges[metricName];
+        }
+
         public void Dispose()
         {
             foreach (var gauge in _activeGauges)
