@@ -10,50 +10,57 @@ using System.Threading.Tasks;
 
 namespace ElasticSeries
 {
-    public partial class SeriesClient : IDisposable, IAsyncDisposable
+    public partial class SeriesClient : IDisposable, IAsyncDisposable 
     {
         private readonly ElasticClient _elasticClient;
-        public SeriesClient(ConnectionSettings settings) : this(settings, 100)
-        {
 
+        private Dictionary<string, IGauge> _activeGauges;
+       
+        public SeriesClient(string configFile) :
+            this(new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(configFile)).ElasticSearchUrl)))
+        {
         }
 
-        public SeriesClient(string configFile) : this(configFile, 100)
+        public SeriesClient(ConnectionSettings settings)
         {
-
-        }
-
-        public SeriesClient(string configFile, int batchSize) :
-            this(new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(configFile)).ElasticSearchUrl)), batchSize)
-        {
-          
-        }
-
-        public SeriesClient(ConnectionSettings settings, int batchSize)
-        {
+            _activeGauges = new Dictionary<string, IGauge>();
             _elasticClient = new ElasticClient(settings);
-            _batchSize = batchSize;
         }
 
-        private dynamic BuildDocument(string metricName, double value, DateTime time, Dictionary<string, object> additionalProperties)
+
+        public MetricGauge CreateMetricGauge(string metricName)
         {
-            dynamic metricData;
-            metricData = new ExpandoObject();
+            return CreateMetricGauge(metricName, 100, null);
+        }
 
-            metricData.MetricName = metricName;
-            metricData.Value = value;
-            metricData.Time = time;
+        public MetricGauge CreateMetricGauge(string metricName, int batchSize)
+        {
+            return CreateMetricGauge(metricName, batchSize, null);
+        }
 
-            if (additionalProperties != null && additionalProperties.Any())
-            {
-                var expando = metricData as IDictionary<string, object>;
-                foreach (var additionalProperty in additionalProperties)
-                {
-                    expando.Add(additionalProperty.Key, additionalProperty.Value);
-                }
-            }
+        public MetricGauge CreateMetricGauge(string metricName, int batchSize, Dictionary<string, object> additionalProperties)
+        {
+            _activeGauges.Add(metricName, new MetricGauge(_elasticClient, metricName, batchSize, additionalProperties));
 
-            return metricData;
+            return _activeGauges[metricName] as MetricGauge;
+        }
+
+        public void Dispose()
+        {
+            foreach (var gauge in _activeGauges)
+                gauge.Value.Dispose();
+
+            _activeGauges.Clear();
+        }
+
+    
+        public async ValueTask DisposeAsync()
+        {
+            foreach (var gauge in _activeGauges)
+                await gauge.Value.DisposeAsync();
+
+            _activeGauges.Clear();
+
         }
     }
 }
