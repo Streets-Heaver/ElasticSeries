@@ -1,5 +1,4 @@
 using ElasticSeries.Classes;
-using ElasticSeries.Classes.Gauges;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,11 +14,11 @@ using System.Threading.Tasks;
 namespace ElasticSeries.IntegrationTests
 {
     [TestClass]
-    public class MetricGaugeTests
+    public class AggregateGaugeTests
     {
 
         [TestMethod]
-        public void RecordsAreSavedWhenForcePushed_NotBeNull()
+        public void AggregateSaved_NotBeNullOrEmpty()
         {
 
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
@@ -27,82 +26,7 @@ namespace ElasticSeries.IntegrationTests
 
             using var client = new SeriesClient(settings);
 
-            var id = client.CreateMetricGauge("test").Record(400, forcePush: true);
-
-            id.Should().NotBeNull();
-
-        }
-
-        [TestMethod]
-        public void ForcePushOnlyCommitsPassedData_NotBeNull()
-        {
-
-            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
-            settings.DefaultIndex("elasticseriestest");
-
-            using var client = new SeriesClient(settings);
-
-            var gauge = client.CreateMetricGauge("test");
-            gauge.Record(400);
-
-            var id = gauge.Record(410, forcePush: true);
-
-            using (var scope = new AssertionScope())
-            {
-                id.Should().NotBeNull();
-                gauge.GetCurrentBatchCount().Should().Be(1);
-            }
-
-        }
-
-        [TestMethod]
-        public async Task RecordsAreSavedWhenForcePushedAsync_NotBeNull()
-        {
-
-            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
-            settings.DefaultIndex("elasticseriestest");
-
-            using var client = new SeriesClient(settings);
-
-            var id = await client.CreateMetricGauge("test").RecordAsync(400, forcePush: true);
-
-            id.Should().NotBeNull();
-
-        }
-
-        [TestMethod]
-        public async Task ForcePushOnlyCommitsPassedDataAsync_NotBeNull()
-        {
-
-            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
-            settings.DefaultIndex("elasticseriestest");
-
-            using var client = new SeriesClient(settings);
-
-            var gauge = client.CreateMetricGauge("test");
-            await gauge.RecordAsync(400);
-
-            var id = await gauge.RecordAsync(410, forcePush: true);
-
-            using (var scope = new AssertionScope())
-            {
-                id.Should().NotBeNull();
-                gauge.GetCurrentBatchCount().Should().Be(1);
-            }
-
-        }
-
-
-        [TestMethod]
-        public void BatchRecordsAreSaved_Be10()
-        {
-
-            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
-            settings.DefaultIndex("elasticseriestest");
-
-            using var client = new SeriesClient(settings);
-
-            var gauge = client.CreateMetricGauge("test");
+            var gauge = client.CreateAggregateGauge("test");
 
             gauge.Record(400);
             gauge.Record(300);
@@ -115,14 +39,14 @@ namespace ElasticSeries.IntegrationTests
             gauge.Record(434);
             gauge.Record(290);
 
-            var ids = gauge.FlushBatch();
-            ids.Count().Should().Be(10);
+            var id = gauge.CommitAggregate();
+            id.Should().NotBeNullOrEmpty();
 
         }
 
 
         [TestMethod]
-        public void BatchIsSavedWhenBatchIsFull_NotBeEmpty()
+        public void AggregateSavedSavedWhenBatchIsFull_NotBeNullOrEmpty()
         {
 
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
@@ -130,7 +54,7 @@ namespace ElasticSeries.IntegrationTests
 
             using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 10);
+            var gauge = client.CreateAggregateGauge("test", 10);
 
             gauge.Record(400);
             gauge.Record(300);
@@ -143,18 +67,18 @@ namespace ElasticSeries.IntegrationTests
             gauge.Record(434);
             var save = gauge.Record(290);
 
-            save.Should().NotBeEmpty();
+            save.Should().NotBeNullOrEmpty();
         }
 
         [TestMethod]
-        public void BatchIsNotSavedWhenBatchIsNotFull_BeEmpty()
+        public void AggregateNotSavedWhenBatchIsNotFull_BeEmpty()
         {
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
             using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 20);
+            var gauge = client.CreateAggregateGauge("test", 20);
 
             gauge.Record(400);
             gauge.Record(300);
@@ -172,14 +96,14 @@ namespace ElasticSeries.IntegrationTests
         }
 
         [TestMethod]
-        public void DisposeFlushesBatch_Be0()
+        public void DisposeCommitsAggregate_Be0()
         {
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
             using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 20);
+            var gauge = client.CreateAggregateGauge("test", 20);
 
             gauge.Record(400);
             gauge.Record(300);
@@ -199,14 +123,14 @@ namespace ElasticSeries.IntegrationTests
         }
 
         [TestMethod]
-        public async Task DisposeAsyncFlushesBatch_Be0()
+        public async Task DisposeAsyncCommitsAggregate_Be0()
         {
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
             await using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 20);
+            var gauge = client.CreateAggregateGauge("test", 20);
 
             await gauge.RecordAsync(400);
             await gauge.RecordAsync(300);
@@ -221,7 +145,7 @@ namespace ElasticSeries.IntegrationTests
 
 
         [TestMethod]
-        public async Task BatchRecordsAreSavedAsync_Be10()
+        public async Task AggregateSavedAsync_NotBeNullOrEmpty()
         {
 
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
@@ -229,7 +153,7 @@ namespace ElasticSeries.IntegrationTests
 
             await using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test");
+            var gauge = client.CreateAggregateGauge("test");
 
             await gauge.RecordAsync(400);
             await gauge.RecordAsync(300);
@@ -242,14 +166,14 @@ namespace ElasticSeries.IntegrationTests
             await gauge.RecordAsync(434);
             await gauge.RecordAsync(290);
 
-            var ids = await gauge.FlushBatchAsync();
-            ids.Count().Should().Be(10);
+            var id = await gauge.CommitAggregateAsync();
+            id.Should().NotBeNullOrEmpty();
 
 
         }
 
         [TestMethod]
-        public async Task BatchIsSavedWhenBatchIsFullAsync_NotBeEmpty()
+        public async Task AggregateSavedSavedWhenBatchIsFullAsync_NotBeEmpty()
         {
 
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
@@ -257,7 +181,7 @@ namespace ElasticSeries.IntegrationTests
 
             await using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 10);
+            var gauge = client.CreateAggregateGauge("test", 10);
 
             await gauge.RecordAsync(400);
             await gauge.RecordAsync(300);
@@ -271,19 +195,19 @@ namespace ElasticSeries.IntegrationTests
 
             var save = await gauge.RecordAsync(290);
 
-            save.Should().NotBeEmpty();
+            save.Should().NotBeNullOrEmpty(); 
 
         }
 
         [TestMethod]
-        public async Task BatchIsNotSavedWhenBatchIsNotFullAsync_BeEmpty()
+        public async Task AggregateNotSavedWhenBatchIsNotFullAsync_BeNullOrEmpty()
         {
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
             await using var client = new SeriesClient(settings);
 
-            var gauge = client.CreateMetricGauge("test", 20);
+            var gauge = client.CreateAggregateGauge("test", 20);
             await gauge.RecordAsync(400);
             await gauge.RecordAsync(300);
             await gauge.RecordAsync(420);
@@ -297,7 +221,7 @@ namespace ElasticSeries.IntegrationTests
 
             var save = await gauge.RecordAsync(290);
 
-            save.Should().BeEmpty();
+            save.Should().BeNullOrEmpty();
 
 
         }
@@ -313,7 +237,7 @@ namespace ElasticSeries.IntegrationTests
             {
                 await using (var client = new SeriesClient(settings))
                 {
-                   client.CreateMetricGauge("test", 20);
+                   client.CreateAggregateGauge("test", 20);
 
                 }
 
@@ -332,7 +256,7 @@ namespace ElasticSeries.IntegrationTests
             {
                 using (var client = new SeriesClient(settings))
                 {
-                    client.CreateMetricGauge("test", 20);
+                    client.CreateAggregateGauge("test", 20);
                 }
             };
             act.Should().NotThrow<ArgumentException>();

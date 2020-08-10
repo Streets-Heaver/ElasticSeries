@@ -1,4 +1,5 @@
 ﻿using ElasticSeries.Classes;
+using ElasticSeries.Classes.Gauges;
 using Nest;
 using Newtonsoft.Json;
 using System;
@@ -43,6 +44,23 @@ namespace ElasticSeries
             _activeGauges.Add(metricName, new MetricGauge(_elasticClient, metricName, batchSize, additionalProperties));
 
             return _activeGauges[metricName] as MetricGauge;
+        }
+
+        public AggregateGauge CreateAggregateGauge(string metricName)
+        {
+            return CreateAggregateGauge(metricName, 100, null);
+        }
+
+        public AggregateGauge CreateAggregateGauge(string metricName, int batchSize)
+        {
+            return CreateAggregateGauge(metricName, batchSize, null);
+        }
+
+        public AggregateGauge CreateAggregateGauge(string metricName, int batchSize, Dictionary<string, object> additionalProperties)
+        {
+            _activeGauges.Add(metricName, new AggregateGauge(_elasticClient, metricName, batchSize, additionalProperties));
+
+            return _activeGauges[metricName] as AggregateGauge;
         }
 
         public void Dispose()

@@ -1,13 +1,14 @@
 ﻿using Nest;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ElasticSeries.Classes
+namespace ElasticSeries.Classes.Gauges
 {
-    public class MetricGauge : GaugeBase, IGauge
+    public class MetricGauge : IGauge
     {
         private readonly string _metricName;
         private readonly Dictionary<string, object> _additionalProperties;
@@ -50,12 +51,12 @@ namespace ElasticSeries.Classes
         {
             if (forcePush)
             {
-                var documents = _elasticClient.IndexMany(new List<dynamic>() { BuildDocument(_metricName, value, time, _additionalProperties) });
+                var documents = _elasticClient.IndexMany(new List<dynamic>() { BuildDocument(value, time) });
                 return documents.Items.Select(x => x.Id);
             }
             else
             {
-                _batchData.Add(BuildDocument(_metricName, value, time, _additionalProperties));
+                _batchData.Add(BuildDocument(value, time));
 
                 if (_batchData.Count == _batchSize)
                     return FlushBatch();
@@ -90,12 +91,12 @@ namespace ElasticSeries.Classes
         {
             if (forcePush)
             {
-                var documents = await _elasticClient.IndexManyAsync(new List<dynamic>() { BuildDocument(_metricName, value, time, _additionalProperties) });
+                var documents = await _elasticClient.IndexManyAsync(new List<dynamic>() { BuildDocument(value, time) });
                 return documents.Items.Select(x => x.Id);
             }
             else
             {
-                _batchData.Add(BuildDocument(_metricName, value, time, _additionalProperties));
+                _batchData.Add(BuildDocument(value, time));
 
                 if (_batchData.Count == _batchSize)
                     return await FlushBatchAsync();
@@ -164,6 +165,27 @@ namespace ElasticSeries.Classes
         public int GetCurrentBatchCount()
         {
             return _batchData.Count;
+        }
+
+        private dynamic BuildDocument(double value, DateTime time)
+        {
+            dynamic metricData;
+            metricData = new ExpandoObject();
+
+            metricData.MetricName = _metricName;
+            metricData.Value = value;
+            metricData.Time = time;
+
+            if (_additionalProperties != null && _additionalProperties.Any())
+            {
+                var expando = metricData as IDictionary<string, object>;
+                foreach (var additionalProperty in _additionalProperties)
+                {
+                    expando.Add(additionalProperty.Key, additionalProperty.Value);
+                }
+            }
+
+            return metricData;
         }
     }
 }

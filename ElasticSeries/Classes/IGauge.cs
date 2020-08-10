@@ -6,5 +6,6 @@ namespace ElasticSeries.Classes
 {
     public interface IGauge : IDisposable, IAsyncDisposable
     {
+
     }
 }
