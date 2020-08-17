@@ -1,5 +1,6 @@
 using ElasticSeries.Classes;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Nest;
 using Newtonsoft.Json;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 namespace ElasticSeries.IntegrationTests
 {
     [TestClass]
-    public class RecordTests
+    public class MetricGaugeTests
     {
 
         [TestMethod]
@@ -25,9 +26,31 @@ namespace ElasticSeries.IntegrationTests
 
             using var client = new SeriesClient(settings);
 
-            var id = client.Record("test", 400, forcePush: true);
+            var id = client.CreateMetricGauge("test").Record(400, forcePush: true);
 
             id.Should().NotBeNull();
+
+        }
+
+        [TestMethod]
+        public void ForcePushOnlyCommitsPassedData_NotBeNull()
+        {
+
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            using var client = new SeriesClient(settings);
+
+            var gauge = client.CreateMetricGauge("test");
+            gauge.Record(400);
+
+            var id = gauge.Record(410, forcePush: true);
+
+            using (var scope = new AssertionScope())
+            {
+                id.Should().NotBeNull();
+                gauge.GetCurrentBatchCount().Should().Be(1);
+            }
 
         }
 
@@ -40,9 +63,31 @@ namespace ElasticSeries.IntegrationTests
 
             using var client = new SeriesClient(settings);
 
-            var id = await client.RecordAsync("test", 400, forcePush: true);
+            var id = await client.CreateMetricGauge("test").RecordAsync(400, forcePush: true);
 
             id.Should().NotBeNull();
+
+        }
+
+        [TestMethod]
+        public async Task ForcePushOnlyCommitsPassedDataAsync_NotBeNull()
+        {
+
+            var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
+            settings.DefaultIndex("elasticseriestest");
+
+            using var client = new SeriesClient(settings);
+
+            var gauge = client.CreateMetricGauge("test");
+            await gauge.RecordAsync(400);
+
+            var id = await gauge.RecordAsync(410, forcePush: true);
+
+            using (var scope = new AssertionScope())
+            {
+                id.Should().NotBeNull();
+                gauge.GetCurrentBatchCount().Should().Be(1);
+            }
 
         }
 
@@ -56,18 +101,20 @@ namespace ElasticSeries.IntegrationTests
 
             using var client = new SeriesClient(settings);
 
-            client.Record("test", 400);
-            client.Record("test", 300);
-            client.Record("test", 420);
-            client.Record("test", 410);
-            client.Record("test", 200);
-            client.Record("test", 324);
-            client.Record("test", 542);
-            client.Record("test", 401);
-            client.Record("test", 434);
-            client.Record("test", 290);
+            var gauge = client.CreateMetricGauge("test");
 
-            var ids = client.FlushBatch();
+            gauge.Record(400);
+            gauge.Record(300);
+            gauge.Record(420);
+            gauge.Record(410);
+            gauge.Record(200);
+            gauge.Record(324);
+            gauge.Record(542);
+            gauge.Record(401);
+            gauge.Record(434);
+            gauge.Record(290);
+
+            var ids = gauge.FlushBatch();
             ids.Count().Should().Be(10);
 
         }
@@ -80,18 +127,20 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            using var client = new SeriesClient(settings, 10);
+            using var client = new SeriesClient(settings);
 
-            client.Record("test", 400);
-            client.Record("test", 300);
-            client.Record("test", 420);
-            client.Record("test", 410);
-            client.Record("test", 200);
-            client.Record("test", 324);
-            client.Record("test", 542);
-            client.Record("test", 401);
-            client.Record("test", 434);
-            var save = client.Record("test", 290);
+            var gauge = client.CreateMetricGauge("test", 10);
+
+            gauge.Record(400);
+            gauge.Record(300);
+            gauge.Record(420);
+            gauge.Record(410);
+            gauge.Record(200);
+            gauge.Record(324);
+            gauge.Record(542);
+            gauge.Record(401);
+            gauge.Record(434);
+            var save = gauge.Record(290);
 
             save.Should().NotBeEmpty();
         }
@@ -102,18 +151,20 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            using var client = new SeriesClient(settings, 20);
+            using var client = new SeriesClient(settings);
 
-            client.Record("test", 400);
-            client.Record("test", 300);
-            client.Record("test", 420);
-            client.Record("test", 410);
-            client.Record("test", 200);
-            client.Record("test", 324);
-            client.Record("test", 542);
-            client.Record("test", 401);
-            client.Record("test", 434);
-            var save = client.Record("test", 290);
+            var gauge = client.CreateMetricGauge("test", 20);
+
+            gauge.Record(400);
+            gauge.Record(300);
+            gauge.Record(420);
+            gauge.Record(410);
+            gauge.Record(200);
+            gauge.Record(324);
+            gauge.Record(542);
+            gauge.Record(401);
+            gauge.Record(434);
+            var save = gauge.Record(290);
 
             save.Should().BeEmpty();
 
@@ -125,22 +176,24 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            using var client = new SeriesClient(settings, 20);
+            using var client = new SeriesClient(settings);
 
-            client.Record("test", 400);
-            client.Record("test", 300);
-            client.Record("test", 420);
-            client.Record("test", 410);
-            client.Record("test", 200);
-            client.Record("test", 324);
-            client.Record("test", 542);
-            client.Record("test", 401);
-            client.Record("test", 434);
-            client.Record("test", 290);
+            var gauge = client.CreateMetricGauge("test", 20);
 
-            client.Dispose();
+            gauge.Record(400);
+            gauge.Record(300);
+            gauge.Record(420);
+            gauge.Record(410);
+            gauge.Record(200);
+            gauge.Record(324);
+            gauge.Record(542);
+            gauge.Record(401);
+            gauge.Record(434);
+            gauge.Record(290);
 
-            client.GetCurrentBatchCount().Should().Be(0);
+            gauge.Dispose();
+
+            gauge.GetCurrentBatchCount().Should().Be(0);
 
         }
 
@@ -150,14 +203,16 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            await using var client = new SeriesClient(settings, 20);
+            await using var client = new SeriesClient(settings);
 
-            await client.RecordAsync("test", 400);
-            await client.RecordAsync("test", 300);
+            var gauge = client.CreateMetricGauge("test", 20);
 
-            await client.DisposeAsync();
+            await gauge.RecordAsync(400);
+            await gauge.RecordAsync(300);
 
-            client.GetCurrentBatchCount().Should().Be(0);
+            await gauge.DisposeAsync();
+
+            gauge.GetCurrentBatchCount().Should().Be(0);
 
 
         }
@@ -173,18 +228,20 @@ namespace ElasticSeries.IntegrationTests
 
             await using var client = new SeriesClient(settings);
 
-            await client.RecordAsync("test", 400);
-            await client.RecordAsync("test", 300);
-            await client.RecordAsync("test", 420);
-            await client.RecordAsync("test", 410);
-            await client.RecordAsync("test", 200);
-            await client.RecordAsync("test", 324);
-            await client.RecordAsync("test", 542);
-            await client.RecordAsync("test", 401);
-            await client.RecordAsync("test", 434);
-            await client.RecordAsync("test", 290);
+            var gauge = client.CreateMetricGauge("test");
 
-            var ids = await client.FlushBatchAsync();
+            await gauge.RecordAsync(400);
+            await gauge.RecordAsync(300);
+            await gauge.RecordAsync(420);
+            await gauge.RecordAsync(410);
+            await gauge.RecordAsync(200);
+            await gauge.RecordAsync(324);
+            await gauge.RecordAsync(542);
+            await gauge.RecordAsync(401);
+            await gauge.RecordAsync(434);
+            await gauge.RecordAsync(290);
+
+            var ids = await gauge.FlushBatchAsync();
             ids.Count().Should().Be(10);
 
 
@@ -197,19 +254,21 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            await using var client = new SeriesClient(settings, 10);
+            await using var client = new SeriesClient(settings);
 
-            await client.RecordAsync("test", 400);
-            await client.RecordAsync("test", 300);
-            await client.RecordAsync("test", 420);
-            await client.RecordAsync("test", 410);
-            await client.RecordAsync("test", 200);
-            await client.RecordAsync("test", 324);
-            await client.RecordAsync("test", 542);
-            await client.RecordAsync("test", 401);
-            await client.RecordAsync("test", 434);
+            var gauge = client.CreateMetricGauge("test", 10);
 
-            var save = await client.RecordAsync("test", 290);
+            await gauge.RecordAsync(400);
+            await gauge.RecordAsync(300);
+            await gauge.RecordAsync(420);
+            await gauge.RecordAsync(410);
+            await gauge.RecordAsync(200);
+            await gauge.RecordAsync(324);
+            await gauge.RecordAsync(542);
+            await gauge.RecordAsync(401);
+            await gauge.RecordAsync(434);
+
+            var save = await gauge.RecordAsync(290);
 
             save.Should().NotBeEmpty();
 
@@ -221,20 +280,21 @@ namespace ElasticSeries.IntegrationTests
             var settings = new ConnectionSettings(new Uri(JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName, "es.json"))).ElasticSearchUrl));
             settings.DefaultIndex("elasticseriestest");
 
-            await using var client = new SeriesClient(settings, 20);
+            await using var client = new SeriesClient(settings);
 
-            await client.RecordAsync("test", 400);
-            await client.RecordAsync("test", 300);
-            await client.RecordAsync("test", 420);
-            await client.RecordAsync("test", 410);
-            await client.RecordAsync("test", 200);
-            await client.RecordAsync("test", 324);
-            await client.RecordAsync("test", 542);
-            await client.RecordAsync("test", 401);
-            await client.RecordAsync("test", 434);
-            await client.RecordAsync("test", 290);
+            var gauge = client.CreateMetricGauge("test", 20);
+            await gauge.RecordAsync(400);
+            await gauge.RecordAsync(300);
+            await gauge.RecordAsync(420);
+            await gauge.RecordAsync(410);
+            await gauge.RecordAsync(200);
+            await gauge.RecordAsync(324);
+            await gauge.RecordAsync(542);
+            await gauge.RecordAsync(401);
+            await gauge.RecordAsync(434);
+            await gauge.RecordAsync(290);
 
-            var save = await client.RecordAsync("test", 290);
+            var save = await gauge.RecordAsync(290);
 
             save.Should().BeEmpty();
 
@@ -252,6 +312,7 @@ namespace ElasticSeries.IntegrationTests
             {
                 await using (var client = new SeriesClient(settings))
                 {
+                   client.CreateMetricGauge("test", 20);
 
                 }
 
@@ -270,7 +331,7 @@ namespace ElasticSeries.IntegrationTests
             {
                 using (var client = new SeriesClient(settings))
                 {
-
+                    client.CreateMetricGauge("test", 20);
                 }
             };
             act.Should().NotThrow<ArgumentException>();
